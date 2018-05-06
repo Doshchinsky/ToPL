@@ -2,8 +2,10 @@
 %{
 #include <stdio.h>
 #include <string.h>
+#include "chaining_hash.h"
 
 int ch;
+int value = 10;
 %}
 
 digit[0-9]
@@ -24,8 +26,9 @@ while {
 }
 
 ("_"|{letter})("_"|{letter}|{digit})* {
-	 printf("IDENTIFIER (%d, %d): %s\n", yylineno, ch, yytext);
-	 ch += yyleng;
+	printf("IDENTIFIER (%d, %d): %s\n", yylineno, ch, yytext);
+	hashtab_add(hashtab, yytext, value*ch);
+	ch += yyleng;
 }
 
 (I{1,3}|I?V{1}|VI{1,3}?|I?X{1,3}I?V?I{0,3}?) {
@@ -46,6 +49,7 @@ while {
 {delim} {
 	printf("DELIMITER (%d, %d): %s\n", yylineno, ch, yytext);
  	ch += yyleng;
+
 }
 
 {ws}+ {
@@ -71,7 +75,14 @@ int main(int argc, char **argv)
 	}
 	ch = 1;
 	yylineno = 1;
+	
+	struct listnode *node;
+	hashtab_init(hashtab);
+	
 	yylex();
+	node = hashtab_lookup(hashtab, "b");
+	printf("Found node: %s, %d\n", node->key, node->value);
 	fclose(yyin);
+	
 	return 0;
 }
