@@ -80,12 +80,15 @@ int main(int argc, char **argv)
 	hashtab_init(hashtab);
 	
 	yylex();
-	//hashtab_print(hashtab);
+
+	hashtab_print(hashtab);
 	node = hashtab_lookup(hashtab, "a");
+
 	if (node != NULL)
-		printf("Found node: %s, %d\n", node->key, node->value);
+		printf("Found requested node: %s, %d\n", node->key, node->value);
 	else
 		printf("Requested node wasn't found in the hash table!\n");
+
 	fclose(yyin);
 	hashtab_delete(hashtab);
 

@@ -45,20 +45,35 @@ void hashtab_add(struct listnode **hashtab, char *key, int value)
 	}
 }
 
+/*struct listnode *hashtab_lookup(struct listnode **hashtab, char *key)
+{
+	int index;
+	struct listnode *node;
+	index = hashtab_hash(key);
+	if (hashtab[index] == NULL)
+		return NULL;
+
+	if (strcmp(hashtab[index]->key, key) == 0)
+		return hashtab[index];
+
+	for (int i = (index + 1) % HASHTAB_SIZE; i != index; i = (i + 1) % HASHTAB_SIZE){
+		if (hashtab[i] == NULL)
+			continue;
+		if (strcmp(hashtab[i]->key, key) == 0)
+			return node;
+	}
+	return NULL;
+}*/
+
 struct listnode *hashtab_lookup(struct listnode **hashtab, char *key)
 {
 	int index;
 	struct listnode *node;
 	index = hashtab_hash(key);
-	if (hashtab[index] == NULL) return NULL;
-	if (strcmp(hashtab[index]->key, key) == 0) {
-		return hashtab[index];
-	}
-	for (int i = (index + 1) % HASHTAB_SIZE; i != index; i = (i + 1) % HASHTAB_SIZE){
-		if (hashtab[i] == NULL) continue;
-		if (strcmp(hashtab[i]->key, key) == 0)
-			return node;
-	}
+	for (node = hashtab[index]; node != NULL; node = node->next)
+		for (node = hashtab[index]; node != NULL ; node = node->coll)
+			if (strcmp(node->key, key) == 0)
+				return node;
 	return NULL;
 }
 
@@ -77,9 +92,15 @@ void hashtab_delete(struct listnode **hashtab)
 
 void hashtab_print(struct listnode **hashtab)
 {
-	struct listnode *curr;
-	for (int i = 0; i < HASHTAB_SIZE; ++i) {
-		curr = hashtab[i];
-		printf("\n\tNode #%d:\t%d\n", i+1, /*curr->key,*/ curr->value);
+	printf("\n\n\t\t\tHASH TABLE:\n\n");
+	for (int i = 0; i < HASHTAB_SIZE; ++i)
+		if (hashtab[i] != NULL) {
+			printf("\tNode #%d:\t%s\t-\t%d\n", i + 1, hashtab[i]->key, hashtab[i]->value);
+		
+		if (hashtab[i]->coll != NULL) {
+			printf("\tNote: This Node (#%d) has collision\n", i + 1);
+			printf("\n");
+		} else printf("\n");
 	}
+	printf("\n");
 }
