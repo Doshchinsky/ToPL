@@ -74,3 +74,12 @@ void hashtab_delete(struct listnode **hashtab)
 		}
 	}
 }
+
+void hashtab_print(struct listnode **hashtab)
+{
+	struct listnode *curr;
+	for (int i = 0; i < HASHTAB_SIZE; ++i) {
+		curr = hashtab[i];
+		printf("\n\tNode #%d:\t%d\n", i+1, /*curr->key,*/ curr->value);
+	}
+}
