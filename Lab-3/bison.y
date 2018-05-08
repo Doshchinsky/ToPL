@@ -27,9 +27,10 @@ dowhile:	DO statement WHILE '(' cmp ')' {
 	printf("\nDo-While\n");
 }
 
-oper:		ID ASSIGN exp';'		{ printf("\noper\n"); }
-cmp:		exp CMP exp				{ printf("\ncomparison\n"); }
-exp:		ID | NUMBER				{ printf("\nexp\n"); }
+oper:		ID ASSIGN exp';'	{ printf("\noper\n"); }
+cmp:		exp CMP exp			{ printf("\ncomparison\n"); }
+exp:		ID					{ printf("\nexp\n"); } |
+			NUMBER				{ printf("\nexp\n"); }
 
 %%
 
