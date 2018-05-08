@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 	yylex();
 
 	hashtab_print(hashtab);
-	node = hashtab_lookup(hashtab, "a");
+	node = hashtab_lookup(hashtab, "z");
 
 	if (node != NULL)
 		printf("Found requested node: %s, %d\n", node->key, node->value);

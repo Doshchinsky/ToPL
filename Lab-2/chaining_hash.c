@@ -20,7 +20,7 @@ unsigned int hashtab_hash(char *key)
 void hashtab_add(struct listnode **hashtab, char *key, int value)
 {
 	struct listnode *node;
-	if (hashtab_lookup(hashtab, key)) 
+	if (!hashtab_lookup(hashtab, key)) 
 	{
 		int index = hashtab_hash(key);
 		node = malloc(sizeof(*node));
