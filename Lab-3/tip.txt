@@ -1,0 +1,7 @@
+How to execute this piece of sh*t:
+	1). In terminal type: "flex lex.l"
+	2). Here same: "bison -dy bison.y"
+	2). Again: "gcc -Wall lex.yy.c chaining_hash.c -o cmpl"
+	3). Finally: "./cmpl prog"
+
+U'r welcome! :)
