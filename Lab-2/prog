@@ -1,0 +1,5 @@
+a := XI;
+b := V;
+do
+	a1 := I;
+while (a < b)

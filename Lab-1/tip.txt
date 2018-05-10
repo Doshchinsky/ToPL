@@ -1,0 +1,6 @@
+How to execute this:
+	1). In terminal type: "flex lex.l"
+	2). Here same: "gcc -Wall lex.yy.c -o cmpl"
+	3). Finally: "./cmpl prog"
+
+U'r welcome! :)

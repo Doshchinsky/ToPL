@@ -1,0 +1,7 @@
+How to execute this piece of sh*t:
+	1)	flex lex.l
+	2)	bison -dy bison.y
+	2)	gcc -Wall *.c -o cmpl
+	3)	./cmpl prog
+
+U'r welcome! :)
