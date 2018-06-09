@@ -33,7 +33,8 @@ SIGN [-+]
 <COMM><<EOF>>	{	TOKEN_LENGTH; yyerror("Unterminated comment"); BEGIN INITIAL; }
 \/\/(.)*(\n|$)	{	TOKEN_LENGTH;}
 
-"main"	{	hashtab_add(hashtab, "main", 256);	SAVE_STRING;	return MAIN;}
+"LET"	{	hashtab_add(hashtab, "main", 256);	SAVE_STRING;	return LET;}
+"IN"	{	SAVE_STRING;	return INN;		}
 
 ";"		{	SAVE_STRING;	return T_SEMCOL;	}
 "+"		{	SAVE_STRING;	return T_PLUS;		}
@@ -74,6 +75,6 @@ SIGN [-+]
 ("_"|{LETTER})("_"|{LETTER}|{DIGIT})* {	SAVE_STRING;	TOKEN_LENGTH;	return ID;}
 {DELIM}	{	TOKEN_LENGTH;}
 {WS}+	{	TOKEN_LENGTH;}
-.		{	TOKEN_LENGTH;	printf("Unknown character (%d, %d): %s\n", yylineno, ch, yytext);}
+.		{	TOKEN_LENGTH; printf("Unknown character (%d, %d): %s\n", yylineno, ch, yytext);}
 
 %%

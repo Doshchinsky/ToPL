@@ -30,7 +30,8 @@
 %token <str> T_RETURN
 %token <str> T_PRINT
 %token <str> T_SCAN
-%token <str> MAIN
+%token <str> LET
+%token <str> INN
 %token <str> T_TYPEVAR
 %token <str> T_INUM T_DNUM
 %token <str> T_ASSIGN
@@ -59,7 +60,7 @@
 
 %type <str> CONST
 
-%type <ast_tree> EXPR1
+%type <ast_tree> EXPR1 
 %type <ast_tree> EXPR2
 %type <ast_tree> VAR
 %type <ast_tree> COND
@@ -81,6 +82,8 @@
 %type <ast_tree> EXPR
 %type <ast_tree> EXPR0
 %type <ast_tree> FUNC
+%type <ast_tree> DEFIN
+%type <ast_tree> INIT
 
 %%
 
@@ -95,7 +98,11 @@ PROG: FUNC {
 	}
 };
 
-FUNC:	T_TYPEVAR MAIN T_LB T_RB T_LF START T_RF {$$ = $6;}
+FUNC:	LET DEFIN INIT {$$ = ast_createNode(P_NODE_T, NULL, $2, $3, NULL);}
+
+DEFIN:	DEFIN DEFVAR2 | DEFVAR2
+
+INIT:	INN START {$$ = $2;}
 
 START:	START STATE {$$ = ast_createNode(P_NODE_T, NULL, $1, $2, NULL);}
 		| STATE {$$ = $1;};
@@ -104,7 +111,6 @@ STATE:	error T_SEMCOL {errcount = errcount + 1; yyerror("Some error deteceted~")
 
 STATE:	DEFVAR { $$ = $1;}
 		| DEFVAR1 { $$ = $1;}
-		| DEFVAR2 { $$ = $1;}
 		| WHILELOOP	{ $$ = $1;}
 		| RET { $$ = $1;}
 		| OUT { $$ = $1;}
