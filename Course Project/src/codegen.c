@@ -144,6 +144,10 @@ static void genCond(struct ast* t, int inv, int label) {
     } else if (tmp1 == NULL && tmp2 != NULL) {
       fprintf(fileout, "cmpl $%s, %d(%%rbp)\n\t", t->left->key,-4*(tmp2->value) - 4);
       invert = 0;
+    } else if (tmp1 != NULL && tmp2 != NULL) {
+      fprintf(fileout, "movl %%eax, %d(%%rbp)\n\t", -4*(tmp1->value) - 4);
+      fprintf(fileout, "cmpl %%eax, %d(%%rbp)\n\t", -4*(tmp2->value) - 4);
+      invert = 1;
     }
     switch (t->key[0]) {
       case '>':
@@ -172,7 +176,6 @@ static void genExpr(struct ast* t) {
   struct listnode* tmp = NULL;
   if (t != NULL) {
     genExpr(t->left);
-    genExpr(t->middle);
     tmp = hashtab_lookup(hashtab, t->key);
     switch (t->type) {
       case P_ID_T:
@@ -194,12 +197,24 @@ static void genExpr(struct ast* t) {
               fprintf(fileout, "addl %d(%%rbp), %%eax\n\t", -4*(tmp->value) - 4);
             else if (t->middle->type == P_CONST_T)
               fprintf(fileout, "addl $%s, %%eax\n\t", t->middle->key);
+            else if (t->left->type == P_OP_T && t->middle->type == P_OP_T) {
+              fprintf(fileout, "movl %%eax, %%ecx\n\t");
+              exprLoad = 0;
+              genExpr(t->middle);
+              fprintf(fileout, "addl %%ecx, %%eax\n\t");
+            }
           break;
           case '-':
             if (tmp != NULL)
               fprintf(fileout, "subl %d(%%rbp), %%eax\n\t", -4*(tmp->value) - 4);
             else if (t->middle->type == P_CONST_T)
               fprintf(fileout, "subl $%s, %%eax\n\t", t->middle->key);
+            else if (t->left->type == P_OP_T && t->middle->type == P_OP_T) {
+              fprintf(fileout, "movl %%eax, %%ecx\n\t");
+              exprLoad = 0;
+              genExpr(t->middle);
+              fprintf(fileout, "subl %%ecx, %%eax\n\t");
+            }
           break;
           case '*':
             if (tmp != NULL)
@@ -207,6 +222,16 @@ static void genExpr(struct ast* t) {
             else if (t->middle->type == P_CONST_T) {
               fprintf(fileout, "movl $%s, %%ebx\n\t", t->middle->key);
               fprintf(fileout, "mull %%ebx\n\t");
+            } else if (t->left->type == P_OP_T && t->middle->type == P_OP_T) {
+              fprintf(fileout, "movl %%eax, %%ecx\n\t");
+              exprLoad = 0;
+              genExpr(t->middle);
+              fprintf(fileout, "mull %%ecx\n\t");
+            } else if ((t->left->type == P_CONST_T || t->left->type == P_ID_T) && t->middle->type == P_OP_T) {
+              fprintf(fileout, "movl %%eax, %%ecx\n\t");
+              exprLoad = 0;
+              genExpr(t->middle);
+              fprintf(fileout, "mull %%ecx\n\t");
             }
           break;
           case '/':
@@ -252,11 +277,13 @@ static void genExpr(struct ast* t) {
 
 static void optimize(struct ast* t) {
   int tmp1, tmp2, res;
-  struct listnode* tmph = NULL;
+  struct listnode* tmph1 = NULL;
+  struct listnode* tmph2 = NULL;
   char buffer[256];
   if (t != NULL) {
     optimize(t->left);
     optimize(t->middle);
+    //print_ast(t, 0);
     if (t->type == P_OP_T) {
       if (t->middle != NULL) {
         if (t->left->type == P_CONST_T && t->middle->type == P_CONST_T) {
@@ -287,19 +314,11 @@ static void optimize(struct ast* t) {
               res = tmp1 ^ tmp2;
             break;
           }
-          swriteInt(buffer, res, 10, -1);
-          free(t->key);
-          t->key = strdup(buffer);
-          t->type = P_CONST_T;
-          free(t->left);
-          free(t->middle);
-          t->left = NULL;
-          t->middle = NULL;
         } else if ((t->left->type == P_ID_T && t->middle->type == P_CONST_T) ||
                    (t->left->type == P_CONST_T && t->middle->type == P_ID_T)) {
-          tmph = hashtab_lookup(hashtab, t->left->type == P_ID_T ? t->left->key : t->middle->key);
-          if (tmph->scan == 1) return;
-          tmp1 = tmph->num;
+          tmph1 = hashtab_lookup(hashtab, t->left->type == P_ID_T ? t->left->key : t->middle->key);
+          if (tmph1->scan == 1) return;
+          tmp1 = tmph1->num;
           tmp2 = atoi(t->left->type == P_ID_T ? t->middle->key : t->left->key);
 
           switch(t->key[0]) {
@@ -326,15 +345,46 @@ static void optimize(struct ast* t) {
               res = tmp1 ^ tmp2;
             break;
           }
-          swriteInt(buffer, res, 10, -1);
-          free(t->key);
-          t->key = strdup(buffer);
-          t->type = P_CONST_T;
-          free(t->left);
-          free(t->middle);
-          t->left = NULL;
-          t->middle = NULL;
+        } else if (t->left->type == P_ID_T && t->middle->type == P_ID_T) {
+          tmph1 = hashtab_lookup(hashtab, t->left->key);
+          if (tmph1->scan == 1) return;
+          tmph2 = hashtab_lookup(hashtab, t->middle->key);
+          if (tmph2->scan == 1) return;
+          tmp1 = tmph1->num;
+          tmp2 = tmph2->num;
+          switch(t->key[0]) {
+            case '+':
+              res = tmp1 + tmp2;
+            break;
+            case '-':
+              res = tmp1 - tmp2;
+            break;
+            case '*':
+              res = tmp1 * tmp2;
+            break;
+            case '/':
+            case '%':
+              res = tmp1 / tmp2;
+            break;
+            case '&':
+              res = tmp1 & tmp2;
+            break;
+            case '|':
+              res = tmp1 | tmp2;
+            break;
+            case '^':
+              res = tmp1 ^ tmp2;
+            break;
+          }
         }
+        swriteInt(buffer, res, 10, -1);
+        free(t->key);
+        t->key = strdup(buffer);
+        t->type = P_CONST_T;
+        free(t->left);
+        free(t->middle);
+        t->left = NULL;
+        t->middle = NULL;
       }
     }
   }
