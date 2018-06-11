@@ -1,0 +1,6 @@
+/obj
+/bin
+/src/*.yy.c
+/src/*.tab.c
+/include/*.tab.h
+/asm/*.out 

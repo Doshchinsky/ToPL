@@ -15,14 +15,14 @@ static void optimize(struct ast* t);
 
 static void gen(struct ast* t);
 static void genExpr(struct ast* t);
-static void genCond(struct ast* t, int inv, int label);
+static void genCond(struct ast* t, int inv, int els, int label);
 static int swriteInt(char* buff, int num, int radix, int znac);
 
 int codeGen(struct ast* t) {
   stackOffset = var_counter * 4 + 8;
   /*strings print*/
 //-------------GENERATE ASM-------------
-  fprintf(fileout, "\t.section .rodata\n");
+  fprintf(fileout, "\t.data\n");
   fprintf(fileout, "INT:\n\t.string \"%%d\"\n");
   fprintf(fileout, "INTN:\n\t.string \"%%d\\n\"\n");
   fprintf(fileout, "\t.text\n");
@@ -51,8 +51,13 @@ static void gen(struct ast* t) {
     switch (t->type) {
       case P_NODE_T:
       case P_DEF_T:
-      case P_DEF1_T:
         gen(t->left);
+        gen(t->middle);
+        fprintf(fileout, "\n\t");
+      break;
+      case P_DEF1_T:
+        genExpr(t->left);
+        exprLoad = 0;
         gen(t->middle);
         fprintf(fileout, "\n\t");
       break;
@@ -61,15 +66,15 @@ static void gen(struct ast* t) {
         fprintf(fileout, "\r.L%03d:\n\t", ++labelcount);
         gen(t->middle);
         fprintf(fileout, "\r.L%03d:\n\t", ++labelcount);
-        genCond(t->left, 1, labelcount - 1);
+        genCond(t->left, 1, 0, labelcount - 1);
         fprintf(fileout, "\n\t");
       break;
       case P_IF_T:
-        genCond(t->left, 0, labelcount + 1);
+        genCond(t->left, 0, 0, labelcount + 1);
         gen(t->middle);
         fprintf(fileout, "\r.L%03d:\n\t", ++labelcount);
         if (t->right != NULL) {
-          genCond(t->left, 1, labelcount + 1);
+          genCond(t->left, 0, 1, labelcount + 1);
           gen(t->right);
           fprintf(fileout, "\r.L%03d:\n\t", ++labelcount);
         }
@@ -98,18 +103,20 @@ static void gen(struct ast* t) {
       case P_RET_T:
           fprintf(fileout, "addq $%d, %%rsp\n\t", stackOffset);
           if (t->left == NULL)
-          fprintf(fileout, "movl $%s, %%eax\n\t", t->key);
+          fprintf(fileout, "movl $1, %%eax\n\t");
+          fprintf(fileout, "movl $%s, %%ebx\n\t", t->key);
           fprintf(fileout, "popq %%rbp\n\t");
-          fprintf(fileout, "ret\n\t");
+          fprintf(fileout, "int $0x80\n\t");
       break;
       case P_OUT_T:
           tmp = hashtab_lookup(hashtab, t->left->key);
           if (tmp != NULL) {
-            fprintf(fileout, "movl $0, %%eax\n\t");
             if (tmp->type == 0)
             fprintf(fileout, "movl $INTN, %%edi\n\t");
             fprintf(fileout, "xorq %%rsi, %%rsi\n\t");
-            fprintf(fileout, "movq %d(%%rbp), %%rsi\n\t", -4*(tmp->value) - 4);
+            fprintf(fileout, "movl %d(%%rbp), %%eax\n\t", -4*(tmp->value) - 4);
+            fprintf(fileout, "movl %%eax, %%esi\n\t");
+            fprintf(fileout, "movl $0, %%eax\n\t");
             fprintf(fileout, "call printf\n\t");
             fprintf(fileout, "\n\t");
           }
@@ -131,44 +138,63 @@ static void gen(struct ast* t) {
   }
 }
 
-static void genCond(struct ast* t, int inv, int label) {
+static void genCond(struct ast* t, int inv, int els, int label) {
   struct listnode* tmp1 = NULL;
   struct listnode* tmp2 = NULL;
-  int invert = 0;
   if (t != NULL) {
     tmp1 = hashtab_lookup(hashtab, t->left->key);
     tmp2 = hashtab_lookup(hashtab, t->middle->key);
     if (tmp1 != NULL && tmp2 == NULL) {
       fprintf(fileout, "cmpl $%s, %d(%%rbp)\n\t", t->middle->key,-4*(tmp1->value) - 4);
-      invert = 1;
     } else if (tmp1 == NULL && tmp2 != NULL) {
-      fprintf(fileout, "cmpl $%s, %d(%%rbp)\n\t", t->left->key,-4*(tmp2->value) - 4);
-      invert = 0;
+      fprintf(fileout, "xorl %%edx, %%edx\n\t");
+      fprintf(fileout, "movl $%s, %%edx\n\t", t->left->key);
+      fprintf(fileout, "cmpl %d(%%rbp), %%edx\n\t", -4*(tmp2->value) - 4);
     } else if (tmp1 != NULL && tmp2 != NULL) {
-      fprintf(fileout, "movl %%eax, %d(%%rbp)\n\t", -4*(tmp1->value) - 4);
-      fprintf(fileout, "cmpl %%eax, %d(%%rbp)\n\t", -4*(tmp2->value) - 4);
-      invert = 1;
+      fprintf(fileout, "xorl %%edx, %%edx\n\t");
+      fprintf(fileout, "movl %%edx, %d(%%rbp)\n\t", -4*(tmp2->value) - 4);
+      fprintf(fileout, "cmpl %%edx, %d(%%rbp)\n\t", -4*(tmp1->value) - 4);
+    } else if (tmp1 == NULL && tmp2 == NULL) {
+      fprintf(fileout, "xorl %%edx, %%edx\n\t");
+      fprintf(fileout, "movl $%s, %%edx\n\t", t->left->key);
+      fprintf(fileout, "cmpl $%s, %%edx\n\t", t->middle->key);
     }
     switch (t->key[0]) {
       case '>':
-        if (invert != inv )
-        fprintf(fileout, "jle .L%03d\n\t", label);
-        else
-        fprintf(fileout, "jg .L%03d\n\t", label);
+        if (inv == 0)
+          if (els == 0)
+            fprintf(fileout, "jle .L%03d\n\t", label);
+          else {
+            fprintf(fileout, "jg .L%03d\n\t", label);
+          }
+        else {
+          fprintf(fileout, "jg .L%03d\n\t", label);
+        }
       break;
       case '<':
-        if (invert != inv )
-        fprintf(fileout, "jns .L%03d\n\t", label);
-        else
-        fprintf(fileout, "js .L%03d\n\t", label);
-      break;
+        if (inv == 0) {
+          if (els == 0)
+            fprintf(fileout, "jns .L%03d\n\t", label);
+          else {
+            fprintf(fileout, "js .L%03d\n\t", label);
+          }
+        } else {
+          fprintf(fileout, "js .L%03d\n\t", label);
+        }
+        break;
       case '=':
         if (inv == 0)
-          fprintf(fileout, "jne .L%03d\n\t", label);
-        if (inv == 1)
+          if (els == 0)
+            fprintf(fileout, "jne .L%03d\n\t", label);
+          else {
+            fprintf(fileout, "je .L%03d\n\t", label);
+          }
+        else {
           fprintf(fileout, "je .L%03d\n\t", label);
+        }
       break;
     }
+    fprintf(fileout, "xorl %%edx, %%edx\n\t");
   }
 }
 
@@ -193,7 +219,7 @@ static void genExpr(struct ast* t) {
         tmp = hashtab_lookup(hashtab, t->middle->key);
         switch (t->key[0]) {
           case '+':
-            if (tmp != NULL)
+            if (tmp != NULL && tmp->type == 0)
               fprintf(fileout, "addl %d(%%rbp), %%eax\n\t", -4*(tmp->value) - 4);
             else if (t->middle->type == P_CONST_T)
               fprintf(fileout, "addl $%s, %%eax\n\t", t->middle->key);
@@ -205,7 +231,7 @@ static void genExpr(struct ast* t) {
             }
           break;
           case '-':
-            if (tmp != NULL)
+            if (tmp != NULL && tmp->type == 0)
               fprintf(fileout, "subl %d(%%rbp), %%eax\n\t", -4*(tmp->value) - 4);
             else if (t->middle->type == P_CONST_T)
               fprintf(fileout, "subl $%s, %%eax\n\t", t->middle->key);
@@ -217,7 +243,7 @@ static void genExpr(struct ast* t) {
             }
           break;
           case '*':
-            if (tmp != NULL)
+            if (tmp != NULL && tmp->type == 0)
               fprintf(fileout, "mull %d(%%rbp)\n\t", -4*(tmp->value) - 4);
             else if (t->middle->type == P_CONST_T) {
               fprintf(fileout, "movl $%s, %%ebx\n\t", t->middle->key);
@@ -236,25 +262,25 @@ static void genExpr(struct ast* t) {
           break;
           case '/':
           case '%':
-            if (tmp != NULL)
+            if (tmp != NULL && tmp->type == 0)
               fprintf(fileout, "divl %d(%%rbp), %%eax\n\t", -4*(tmp->value) - 4);
             else if (t->middle->type == P_CONST_T)
               fprintf(fileout, "divl $%s, %%eax\n\t", t->middle->key);
           break;
           case '&':
-            if (tmp != NULL)
+            if (tmp != NULL && tmp->type == 0)
               fprintf(fileout, "andl %d(%%rbp), %%eax\n\t", -4*(tmp->value) - 4);
             else if (t->middle->type == P_CONST_T)
               fprintf(fileout, "andl $%s, %%eax\n\t", t->middle->key);
           break;
           case '|':
-            if (tmp != NULL)
+            if (tmp != NULL && tmp->type == 0)
               fprintf(fileout, "orl %d(%%rbp), %%eax\n\t", -4*(tmp->value) - 4);
             else if (t->middle->type == P_CONST_T)
               fprintf(fileout, "orl $%s, %%eax\n\t", t->middle->key);
           break;
           case '^':
-            if (tmp != NULL)
+            if (tmp != NULL && tmp->type == 0)
               fprintf(fileout, "xorl %d(%%rbp), %%eax\n\t", -4*(tmp->value) - 4);
             else if (t->middle->type == P_CONST_T)
               fprintf(fileout, "xorl $%s, %%eax\n\t", t->middle->key);
@@ -262,7 +288,7 @@ static void genExpr(struct ast* t) {
           case '!':
           case '~':
             tmp = hashtab_lookup(hashtab, t->left->key);
-            if (tmp != NULL)
+            if (tmp != NULL && tmp->type == 0)
               fprintf(fileout, "notl %d(%%rbp)\n\t", -4*(tmp->value) - 4);
             else if (t->middle->type == P_CONST_T)
               fprintf(fileout, "notl %%eax\n\t");

@@ -200,10 +200,10 @@ DEFVAR2:	T_TYPEVAR ID_TOK T_SEMCOL {
 
 RET:	T_RETURN CONST T_SEMCOL T_FIN {$$ = ast_createNode(P_RET_T, $2, NULL, NULL, NULL);}
 
-BODY:	STATE
-		| STATELIST;
+BODY:	STATE {$$ = $1;}
+		| STATELIST {$$ = $1;};
 
-STATELIST:	STATE BODY;
+STATELIST:	STATE BODY {$$ = ast_createNode(P_NODE_T, NULL, $1, $2, NULL);};
 
 WHILELOOP: T_WHILE T_LB COND T_RB T_LF BODY T_RF {
 	$$ = ast_createNode(P_WHILE_T, $1, $3, $6, NULL);
@@ -212,7 +212,9 @@ WHILELOOP: T_WHILE T_LB COND T_RB T_LF BODY T_RF {
 	$$ = ast_createNode(P_WHILE_T, $1, $3, $5, NULL);
 };
 
-COND:	VAR {$$ = $1;}
+COND:	VAR {
+		struct ast* tmpast = ast_createNode(P_CONST_T, strdup("1"), NULL, NULL, NULL);
+		$$ = ast_createNode(P_COND_T, strdup("=="), $1, tmpast, NULL);}
 		| VAR T_LT VAR {
 	$$ = ast_createNode(P_COND_T, $2, $1, $3, NULL);
 }
