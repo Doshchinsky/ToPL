@@ -3,19 +3,22 @@ LET
 	int b;
 	int c;
 	int d;
+	int sum;
 
 IN
-	a := 10;
-	b := 3;
-	c := 4;
+	a := 1;
+	b := 2;
+	c := 3;
 
 	read(d);
 
-	a := 3 + 4 * c + b * d;
-
+	sum := a + b + c + d;
 
 	write(a);
 	write(b);
 	write(c);
 	write(d);
+	write(sum);
+
 	return 0;
+FIN
