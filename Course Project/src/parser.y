@@ -32,6 +32,7 @@
 %token <str> T_SCAN
 %token <str> LET
 %token <str> INN
+%token <str> T_FIN
 %token <str> T_TYPEVAR
 %token <str> T_INUM T_DNUM
 %token <str> T_ASSIGN
@@ -197,7 +198,7 @@ DEFVAR2:	T_TYPEVAR ID_TOK T_SEMCOL {
 	$$ = ast_createNode(P_DEF2_T, $1, $2, NULL, NULL);
 };
 
-RET:	T_RETURN CONST T_SEMCOL {$$ = ast_createNode(P_RET_T, $2, NULL, NULL, NULL);}
+RET:	T_RETURN CONST T_SEMCOL T_FIN {$$ = ast_createNode(P_RET_T, $2, NULL, NULL, NULL);}
 
 BODY:	STATE
 		| STATELIST;

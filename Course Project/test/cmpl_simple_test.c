@@ -21,3 +21,4 @@ IN
 	write(sum);
 
 	return 0;
+FIN

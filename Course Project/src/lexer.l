@@ -35,6 +35,7 @@ SIGN [-+]
 
 "LET"	{	hashtab_add(hashtab, "main", 256);	SAVE_STRING;	return LET;}
 "IN"	{	SAVE_STRING;	return INN;		}
+"FIN"	{	SAVE_STRING;	return T_FIN;}
 
 ";"		{	SAVE_STRING;	return T_SEMCOL;	}
 "+"		{	SAVE_STRING;	return T_PLUS;		}

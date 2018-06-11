@@ -22,3 +22,4 @@ IN
 	write(c);
 
 	return 0;
+FIN
