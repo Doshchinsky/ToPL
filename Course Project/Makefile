@@ -38,6 +38,7 @@ TEST:
 
 .PHONY: clean
 clean:
+	rm -f ./*.s
 	rm -f ./obj/*.o
 	rm -f ./src/lexer.yy.c
 	rm -f ./src/parser.tab.c

@@ -5,17 +5,20 @@ LET
 	int d;
 
 IN
-	a := 10;
-	b := 3;
-	c := 4;
+	a := 1;
+	b := 2;
 
-	read(d);
+	read(c);
 
-	a := 3 + 4 * c + b * d;
-
+	if (a < c)
+	{
+		d := a + c;
+	} else {
+		d := a - c;
+	}
 
 	write(a);
 	write(b);
 	write(c);
-	write(d);
+
 	return 0;
