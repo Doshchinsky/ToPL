@@ -23,6 +23,9 @@ DELIM[();{},:]
 WS[ \n\t]
 OPER [-+*/<>|?!%=~]
 SIGN [-+]
+CAW [']
+BCSL [\\]
+SP[ntabr]
 %x COMM
 %%
 
@@ -60,7 +63,11 @@ SIGN [-+]
 
 {SIGN}?{DIGIT}+	{	TOKEN_LENGTH;	SAVE_STRING;	return T_INUM;}
 {SIGN}?({DIGIT}+\.{DIGIT}+|{DIGIT}+\.|{DIGIT}+)([eE]{SIGN}?{DIGIT}+)? {	TOKEN_LENGTH;	SAVE_STRING;	return T_DNUM;}
-
+{CAW}.{CAW}|{CAW}{BCSL}{SP}{CAW} {
+  ch += yyleng;
+  yylval.str = strdup(yytext);
+  return CNUM;
+}
 "int"|"float"	{	TOKEN_LENGTH;	SAVE_STRING;	return T_TYPEVAR;	}
 "do"			{	TOKEN_LENGTH;	SAVE_STRING;	return T_DO;		}
 "while"			{	TOKEN_LENGTH;	SAVE_STRING;	return T_WHILE;		}

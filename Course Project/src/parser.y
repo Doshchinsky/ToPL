@@ -10,6 +10,10 @@
 	extern char *yytext;
 	extern struct listnode* hashtab[];
 	extern int yylex();
+  extern int debuginfo;
+  extern int optimization;
+  void optimize(struct ast* t);
+  int swriteInt(char* buff, int num, int radix, int znac);
 
 	void yyerror(char *);
 	int errcount = 0;
@@ -34,7 +38,7 @@
 %token <str> INN
 %token <str> T_FIN
 %token <str> T_TYPEVAR
-%token <str> T_INUM T_DNUM
+%token <str> T_INUM T_DNUM CNUM
 %token <str> T_ASSIGN
 %token <str> T_CMP
 %token <str> T_SEMCOL
@@ -154,9 +158,12 @@ DEFVAR:	T_TYPEVAR ID_TOK T_ASSIGN EXPR T_SEMCOL {
 	struct listnode* tmphash = hashtab_lookup(hashtab, tmpast->key);
 	tmphash->type = !strcmp($1, "int") ? 0 : 1;
 	tmpast = $4;
-	if (tmpast->type == P_CONST_T) {
-		tmphash->num = atoi(tmpast->key);
-	}
+  if (tmpast->type == P_CONST_T || tmpast->type == P_CONSTC_T) {
+    tmphash->num = atoi(tmpast->key);
+  }
+  if (optimization == 1) {
+    optimize(tmpast);
+  }
 	$$ = ast_createNode(P_DEF_T, $1, $4, $2, NULL);
 };
 
@@ -165,9 +172,13 @@ DEFVAR1:	ID_TOK1 T_ASSIGN EXPR T_SEMCOL {
 	struct ast* tmpast = $1;
 	struct listnode* tmphash = hashtab_lookup(hashtab, tmpast->key);
 	tmpast = $3;
-	if (tmpast->type == P_CONST_T) {
-		tmphash->num = atoi(tmpast->key);
-	}
+    tmphash->scan = 1;
+    if (tmpast->type == P_CONST_T || tmpast->type == P_CONSTC_T) {
+      tmphash->num = atoi(tmpast->key);
+    }
+    if (optimization == 1) {
+      optimize(tmpast);
+    }
 	$$ = ast_createNode(P_DEF1_T, $2, $3, $1, NULL);
 };
 
@@ -250,14 +261,38 @@ ID_TOK1: ID {
 };
 
 VAR:	CONST {
-	$$ = ast_createNode(P_CONST_T, $1, NULL, NULL, NULL);
+  char *tmp = $1;
+  if (tmp[0] == '\''){
+    int n;
+    char buf[256];
+    if (tmp[1] == '\\'){
+      if (tmp[2] == '0') {
+        n = 0;
+      } else if (tmp[2] == 'n') {
+        n = 10;
+      } else if (tmp[2] == 'r') {
+        n = 13;
+      } else if (tmp[2] == 'a') {
+        n = 7;
+      } else if (tmp[2] == 't') {
+        n = 9;
+      } else n = 0;
+    } else {
+      n = tmp[1] - '\0';
+    }
+    swriteInt(buf, n, 10, -1);
+    $$ = ast_createNode(P_CONSTC_T, strdup(buf), NULL, NULL, NULL);
+  }
+  else
+  $$ = ast_createNode(P_CONST_T, $1, NULL, NULL, NULL);
 }
 		| ID_TOK1 {
 	$$ = $1;
 };
 
 CONST:	T_INUM
-		| T_DNUM;
+		| T_DNUM
+        | CNUM;;
 
 %%
 void yyerror(char *errmsg)

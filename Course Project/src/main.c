@@ -7,6 +7,7 @@ extern int ch;
 extern char *yytext;
 extern void yyparse();
 int optimization = 0;
+int debuginfo = 0;
 /*file descriptor in|out*/
 static int fdi = -1;
 static int fdo = -1;
@@ -17,8 +18,10 @@ int main(int argc, char **argv)
 {
   int tmp;
   char outfilename[256];
-  optimization = 0;
   int i = 0;
+  optimization = 0;
+  debuginfo = 0;
+
   printf("Arguments count: %d\n\n", argc);
   if(argc < 2) {
     printf("Not enough arguments. Please specify filename. \n");
@@ -36,7 +39,11 @@ int main(int argc, char **argv)
       printf("Optimization enabled. \n");
       optimization = 1;
     }
-    if (i != fdo && (i != (fdo - 1)) && (strcmp(argv[i], "-O") != 0)) {
+    if (strcmp("-i", argv[i]) == 0) {
+      printf("Debuginfo enabled. \n");
+      debuginfo = 1;
+    }
+    if (i != fdo && (i != (fdo - 1)) && (strcmp(argv[i], "-O") != 0) && (strcmp(argv[i], "-i") != 0)) {
       fdi = i;
     }
   }
@@ -72,6 +79,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
+  printf("\n");
   printf("File descriptors:\nin: %d\nout: %d\n\n", fdi, fdo);
   printf("File names:\nin: %s\nout: %s\n\n",
         argv[fdi], fdo == -1 ? outfilename : argv[fdo]);
