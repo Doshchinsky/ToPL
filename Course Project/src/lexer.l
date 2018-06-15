@@ -62,7 +62,6 @@ SP[ntabr]
 "=="	{	SAVE_STRING;	return T_EQ;		}
 
 {SIGN}?{DIGIT}+	{	TOKEN_LENGTH;	SAVE_STRING;	return T_INUM;}
-{SIGN}?({DIGIT}+\.{DIGIT}+|{DIGIT}+\.|{DIGIT}+)([eE]{SIGN}?{DIGIT}+)? {	TOKEN_LENGTH;	SAVE_STRING;	return T_DNUM;}
 {CAW}.{CAW}|{CAW}{BCSL}{SP}{CAW} {
   ch += yyleng;
   yylval.str = strdup(yytext);

@@ -16,8 +16,9 @@ static void gen(struct ast* t);
 static void genExpr(struct ast* t);
 static void genCond(struct ast* t, int inv, int els, int label);
 
-  void optimize(struct ast* t);
-  int swriteInt(char* buff, int num, int radix, int znac);
+void optimize(struct ast* t);
+int swriteInt(char* buff, int num, int radix, int znac);
+
 int codeGen(struct ast* t) {
 	stackOffset = var_counter * 4 + 8;
 	/*strings print*/
@@ -443,12 +444,12 @@ void optimize(struct ast* t) {
 
 int swriteInt(char* buff, int num, int radix, int znac)
 {
-	char sign								= '-';
-	int i										= 0;
-	int j										= 0;
-	int k										= 0;
+	char sign = '-';
+	int i = 0;
+	int j = 0;
+	int k = 0;
 	char buffer[SIZE_BUFFER] = {0};
-	int counter							= SIZE_BUFFER;
+	int counter = SIZE_BUFFER;
 
 
 	if (num == 0) {

@@ -10,10 +10,11 @@
 	extern char *yytext;
 	extern struct listnode* hashtab[];
 	extern int yylex();
-  extern int debuginfo;
-  extern int optimization;
-  void optimize(struct ast* t);
-  int swriteInt(char* buff, int num, int radix, int znac);
+	extern int debuginfo;
+	extern int optimization;
+	
+	void optimize(struct ast* t);
+	int swriteInt(char* buff, int num, int radix, int znac);
 
 	void yyerror(char *);
 	int errcount = 0;
